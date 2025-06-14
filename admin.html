@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C.E.O. - Банк | Адмін-панель</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="./logo.png" type="image/png">
+  <style>
+    :root {
+      --primary-color: #4f46e5; --primary-hover: #4338ca; --secondary-color: #10b981;
+      --danger-color: #ef4444; --warning-color: #f59e0b; --background-light: #f9fafb;
+      --background-dark: #1f2937; --sidebar-bg: #111827; --card-bg: #ffffff;
+      --text-light: #9ca3af; --text-dark: #f3f4f6; --text-headings: #111827;
+      --border-light: #e5e7eb; --border-dark: #374151; --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+      --border-radius: 0.75rem;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background-color: var(--background-light); color: var(--text-light); line-height: 1.6; font-size: 16px; }
+    .login-container-wrapper { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: var(--sidebar-bg); padding: 1rem; }
+    .login-card { background-color: var(--background-dark); padding: 2.5rem; border-radius: var(--border-radius); box-shadow: var(--shadow-md); text-align: center; max-width: 400px; width: 100%; border: 1px solid var(--border-dark); }
+    .login-logo { width: 60px; margin-bottom: 1.5rem; }
+    .login-card h2 { color: var(--text-dark); margin-bottom: 0.5rem; font-size: 1.75rem;}
+    .login-subtitle { color: var(--text-light); margin-bottom: 2rem; }
+    .form-group { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem;}
+    input, textarea, select { padding: 0.875rem 1rem; border: 1px solid var(--border-dark); border-radius: 0.5rem; background-color: var(--background-dark); color: var(--text-dark); font-size: 1rem; transition: all 0.2s ease; width: 100%; }
+    input:focus, textarea:focus, select:focus { border-color: var(--primary-color); background-color: var(--sidebar-bg); outline: none; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); }
+    .styled-button { color: white; padding: 0.875rem 1.5rem; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+    .styled-button:hover { transform: translateY(-2px); }
+    .login-btn { background-color: var(--primary-color); }
+    .login-btn:hover { background-color: var(--primary-hover); }
+    .admin-panel { display: flex; min-height: 100vh; }
+    .sidebar { width: 260px; background-color: var(--sidebar-bg); color: var(--text-dark); padding: 1.5rem; position: fixed; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+    .sidebar-header { display: flex; align-items: center; gap: 1rem; padding-bottom: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-dark); }
+    .sidebar-logo { width: 40px; height: 40px; }
+    .sidebar-header h2 { font-size: 1.5rem; color: white; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 0.5rem; flex-grow: 1; }
+    .nav-item { background-color: transparent; color: var(--text-light); padding: 0.75rem 1rem; border-radius: 0.5rem; border: none; text-align: left; cursor: pointer; font-size: 0.95rem; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; transition: all 0.2s ease; }
+    .nav-item:hover { background-color: var(--background-dark); color: white; }
+    .nav-item.active { background-color: var(--primary-color); color: white; font-weight: 600; }
+    .nav-icon { font-size: 1.25rem; width: 24px; text-align: center; }
+    .logout-btn-sidebar { margin-top: auto; background-color: var(--background-dark); }
+    .logout-btn-sidebar:hover { background-color: var(--danger-color); }
+    .main-content { margin-left: 260px; padding: 2rem; flex-grow: 1; }
+    .section { background-color: var(--card-bg); padding: 2rem; border-radius: var(--border-radius); box-shadow: var(--shadow-md); margin-bottom: 2rem; }
+    .section-header { font-size: 1.75rem; color: var(--text-headings); margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-light); }
+    .section-subheader { font-size: 1.25rem; color: var(--text-headings); margin-bottom: 1rem; margin-top: 1.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-light); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; }
+    .stat-card { background-color: #f9fafb; padding: 1.5rem; border-radius: var(--border-radius); text-align: center; border: 1px solid var(--border-light); }
+    .stat-card h3 { color: var(--text-light); font-size: 0.9rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-card p { font-size: 2.25rem; font-weight: 700; color: var(--text-headings); }
+    #activityChart { max-height: 350px; margin-top: 2rem; }
+    .data-list { margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+    .data-item { background-color: #f9fafb; padding: 1rem 1.5rem; border-radius: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border: 1px solid var(--border-light); transition: all 0.2s ease; }
+    .data-item:hover { border-color: var(--primary-color); transform: translateY(-2px); box-shadow: var(--shadow-md);}
+    .data-item span { font-size: 0.9rem; flex-grow: 1; }
+    .data-item .button-group { display: flex; gap: 0.5rem; }
+    .data-item .styled-button { padding: 0.5rem 1rem; font-size: 0.85rem; }
+    .action-btn { background-color: var(--secondary-color); }
+    .action-btn.warning { background-color: var(--warning-color); }
+    .action-btn.danger { background-color: var(--danger-color); }
+    .action-btn.close-btn { background-color: var(--text-light); }
+    .action-btn:hover { filter: brightness(1.1); }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 1rem; backdrop-filter: blur(4px); }
+    .modal-content-panel { background-color: var(--card-bg); padding: 2rem; border-radius: var(--border-radius); box-shadow: var(--shadow-md); max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
+    .modal-content-panel h3 { margin-top: 0; color: var(--text-headings); font-size: 1.5rem; }
+    .modal-buttons { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; flex-wrap: wrap; }
+    .checkbox-label { display: flex; align-items: center; gap: 0.75rem; color: #374151; }
+    .chat-container { max-height: 400px; overflow-y: auto; padding: 1rem; border: 1px solid var(--border-light); border-radius: 0.5rem; background-color: #f9fafb; }
+    .chat-message { margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem; line-height: 1.5; max-width: 80%; }
+    .chat-message.admin { background-color: #dbeafe; text-align: right; margin-left: auto; color: #1e40af; }
+    .chat-message.user { background-color: #e5e7eb; text-align: left; margin-right: auto; color: #374151;}
+    .shop-image-preview, .lot-image-preview { max-width: 100px; max-height: 100px; margin-top: 0.5rem; border-radius: 0.5rem; object-fit: cover;}
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-grid .full-width { grid-column: 1 / -1; }
+    hr { margin: 2rem 0; border: 0; border-top: 1px solid var(--border-light); }
+    .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+    .submission-file-link { color: var(--primary-color); text-decoration: none; }
+    .submission-file-link:hover { text-decoration: underline; }
+    .winner-info { background-color: var(--secondary-color); color: white; padding: 0.5rem; border-radius: 0.5rem; font-weight: 600; }
+    #insurance-options-container .form-grid { margin-bottom: 0.5rem; align-items: center;}
+    @media (max-width: 768px) {
+      .admin-panel { flex-direction: column; }
+      .sidebar { width: 100%; height: auto; position: relative; z-index: 999; }
+      .main-content { margin-left: 0; padding: 1.5rem; }
+      .data-item { flex-direction: column; align-items: flex-start; }
+      .data-item .button-group { width: 100%; justify-content: flex-start; }
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div id="login" class="login-container-wrapper">
+  <div class="login-card">
+    <img src="./logo.png" alt="Логотип C.E.O. Банк" class="login-logo" onerror="this.src='https.placehold.co/70x70/ffffff/4f46e5?text=CEO';">
+    <h2>C.E.O. - Банк</h2>
+    <p class="login-subtitle">Вхід до адмін-панелі</p>
+    <div class="form-group">
+      <input type="text" id="username" placeholder="Ім'я користувача" autocomplete="username">
+      <input type="password" id="password" placeholder="Пароль" autocomplete="current-password">
+      <button onclick="adminLogin()" class="styled-button login-btn">Увійти</button>
+    </div>
+  </div>
+</div>
+
+<div id="adminPanel" class="admin-panel" style="display: none;">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <img src="./logo.png" alt="Логотип C.E.O. Банк" class="sidebar-logo" onerror="this.src='https.placehold.co/45x45/f3f4f6/1f2937?text=A';">
+      <h2>Адмін</h2>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="showSection('dashboard')"><span class="nav-icon">📊</span> Панель</button>
+      <button class="nav-item" onclick="showSection('users')"><span class="nav-icon">👥</span> Користувачі</button>
+      <button class="nav-item" onclick="showSection('transactions')"><span class="nav-icon">📜</span> Транзакції</button>
+      <button class="nav-item" onclick="showSection('purchases')"><span class="nav-icon">🛍️</span> Покупки</button>
+      <button class="nav-item" onclick="showSection('shop')"><span class="nav-icon">🛒</span> Магазин</button>
+      <button class="nav-item" onclick="showSection('auction')"><span class="nav-icon">⚖️</span> Аукціон</button>
+      <button class="nav-item" onclick="showSection('rewards')"><span class="nav-icon">🎁</span> Завдання</button>
+      <button class="nav-item" onclick="showSection('schedule')"><span class="nav-icon">🗓️</span> Розклад</button>
+      <button class="nav-item" onclick="showSection('loans')"><span class="nav-icon">🏦</span> Кредити</button>
+      <button class="nav-item" onclick="showSection('exchange')"><span class="nav-icon">📈</span> Біржа</button>
+      <button class="nav-item" onclick="showSection('insurance')"><span class="nav-icon">🛡️</span> Страхування</button>
+      <button class="nav-item" onclick="showSection('messages')"><span class="nav-icon">✉️</span> Повідомлення</button>
+      <button class="nav-item" onclick="showSection('chat')"><span class="nav-icon">💬</span> Чат</button>
+      <button class="nav-item" onclick="showSection('settings')"><span class="nav-icon">⚙️</span> Налаштування</button>
+    </nav>
+    <button class="nav-item styled-button logout-btn-sidebar" onclick="adminLogout()"><span class="nav-icon">🚪</span> Вийти</button>
+  </div>
+
+  <main class="main-content">
+    <div id="dashboard" class="section">
+      <h2 class="section-header">Панель управління</h2>
+      <div class="stats-grid">
+        <div class="stat-card"><h3>Користувачів</h3><p id="totalUsers">0</p></div>
+        <div class="stat-card"><h3>Транзакцій</h3><p id="totalTransactions">0</p></div>
+        <div class="stat-card"><h3>Загальний баланс</h3><p id="totalBalance">0 грн</p></div>
+        <div class="stat-card"><h3>Грошова маса</h3><p id="moneySupply">0 грн</p></div>
+        <div class="stat-card"><h3>Загальна сума боргів</h3><p id="totalDebt">0 грн</p></div>
+      </div>
+      <canvas id="activityChart"></canvas>
+      <h3 class="section-subheader">Найпопулярніші товари</h3>
+      <div id="popularItemsList" class="data-list"></div>
+      <h3 class="section-subheader">Найактивніші користувачі</h3>
+      <div id="activeUsersList" class="data-list"></div>
+    </div>
+
+    <div id="users" class="section" style="display: none;">
+      <h2 class="section-header">Управління користувачами</h2>
+      <h3 class="section-subheader">Створити користувача</h3>
+      <div class="form-group">
+        <input type="text" id="newUsername" placeholder="Нове ім'я користувача">
+        <input type="password" id="newPassword" placeholder="Пароль">
+        <div class="form-grid">
+          <input type="number" id="initialBalance" placeholder="Початковий баланс">
+          <input type="number" id="initialLoyaltyPoints" placeholder="Початкові бали лояльності">
+        </div>
+        <button onclick="createUser()" class="styled-button action-btn">Створити</button>
+      </div>
+      <div class="team-section">
+        <h3 class="section-subheader">Команди</h3>
+        <div class="form-group">
+          <input type="text" id="teamName" placeholder="Назва команди">
+          <select id="teamMembers" multiple title="Оберіть членів команди"></select>
+          <button onclick="createTeam()" class="styled-button action-btn">Створити команду</button>
+        </div>
+        <div class="bulk-action">
+          <h3 class="section-subheader">Масові операції з балансом команди</h3>
+          <select id="bulkTeamSelect"><option value="">Оберіть команду</option></select>
+          <input type="number" id="bulkAmount" placeholder="Сума">
+          <input type="text" id="bulkComment" placeholder="Коментар до операції">
+          <select id="bulkAction"><option value="add">Додати</option><option value="subtract">Відняти</option></select>
+          <button onclick="bulkAdjustBalance()" class="styled-button action-btn">Застосувати</button>
+        </div>
+      </div>
+      <h3 class="section-subheader">Список користувачів</h3>
+      <div id="userList" class="data-list"></div>
+    </div>
+
+    <div id="transactions" class="section" style="display: none;">
+      <h2 class="section-header">Транзакції</h2>
+      <div class="form-group">
+        <input type="text" id="transactionFilter" placeholder="Фільтр за користувачем або коментарем">
+        <button onclick="filterTransactions()" class="styled-button action-btn">Фільтрувати</button>
+      </div>
+      <div id="transactionList" class="data-list"></div>
+    </div>
+
+    <div id="purchases" class="section" style="display: none;">
+      <h2 class="section-header">Історія покупок</h2>
+      <div class="form-group">
+        <input type="text" id="purchaseFilter" placeholder="Фільтр за користувачем або товаром">
+        <button onclick="filterPurchases()" class="styled-button action-btn">Фільтрувати</button>
+      </div>
+      <div id="purchaseList" class="data-list"></div>
+    </div>
+
+    <div id="shop" class="section" style="display: none;">
+      <h2 class="section-header">Управління магазином</h2>
+      <h3 class="section-subheader">Додати / Редагувати товар</h3>
+      <div class="form-group">
+        <div class="form-grid">
+          <input class="full-width" type="text" id="itemName" placeholder="Назва товару">
+          <input type="number" id="itemPrice" placeholder="Ціна">
+          <input type="number" id="itemDiscountPrice" placeholder="Ціна зі знижкою (необов'язково)">
+          <input type="number" id="itemQuantity" placeholder="Кількість в наявності">
+          <input class="full-width" type="text" id="itemCategory" placeholder="Категорія (напр., electronics, clothing, food)">
+          <textarea class="full-width" id="itemDescription" placeholder="Опис"></textarea>
+          <input class="full-width" type="text" id="itemImage" placeholder="Шлях до зображення (напр., ./t1.png)">
+          <label class="checkbox-label full-width">
+            <input type="checkbox" id="itemIsLottery" onchange="toggleLotteryFields()"> Це лотерейний квиток?
+          </label>
+          <div id="lotteryItemOptions" style="display: none;" class="form-grid full-width">
+            <p class="full-width" style="color: #6b7280; font-size: 0.85rem;">Загальна кількість квитків дорівнює полю "Кількість в наявності". Номери будуть від 1 до N.</p>
+            <input type="number" id="lotteryMaxTicketsUser" placeholder="Макс. квитків на користувача">
+          </div>
+        </div>
+        <img id="imagePreview" class="shop-image-preview" style="display: none;" alt="Попередній перегляд">
+        <button id="addShopItemBtn" onclick="addShopItem()" class="styled-button action-btn">Зберегти товар</button>
+        <button id="clearShopFormBtn" onclick="clearShopForm()" class="styled-button action-btn close-btn" style="display: none;">Скасувати редагування</button>
+      </div>
+      <hr>
+      <h3 class="section-subheader">Керування лотерейними квитками</h3>
+      <p>Після проведення фізичної лотереї, натисніть кнопку нижче, щоб деактивувати всі продані квитки.</p>
+      <button onclick="deactivateAllLotteryTickets()" class="styled-button action-btn danger full-width" style="margin-top: 1rem;">Деактивувати всі квитки</button>
+      <hr>
+      <h3 class="section-subheader">Список товарів</h3>
+      <div id="shopList" class="data-list"></div>
+    </div>
+
+    <div id="auction" class="section" style="display: none;">
+      <h2 class="section-header">Управління аукціоном</h2>
+      <h3 class="section-subheader">Загальний аукціон (Live торги)</h3>
+      <div class="form-group">
+        <h3>Статус аукціону: <span id="auctionStatus">Неактивний</span></h3>
+        <div id="auctionWinnerInfo" style="display:none;" class="winner-info"></div>
+        <label for="auctionEndTime">Час завершення аукціону:</label>
+        <input type="datetime-local" id="auctionEndTime">
+        <button onclick="toggleAuction()" class="styled-button action-btn" id="toggleAuctionBtn">Активувати аукціон</button>
+      </div>
+      <hr>
+      <h3 class="section-subheader">Створити особливий лот</h3>
+      <div class="form-group">
+        <div class="form-grid">
+          <input type="text" id="lotName" placeholder="Назва лоту" class="full-width">
+          <textarea id="lotDescription" placeholder="Опис лоту" class="full-width"></textarea>
+          <input type="text" id="lotImage" placeholder="URL зображення лоту" class="full-width">
+          <img id="lotImagePreview" class="lot-image-preview" style="display: none;" alt="Попередній перегляд">
+          <input type="number" id="lotStartPrice" placeholder="Початкова ціна">
+          <input type="datetime-local" id="lotEndTime" placeholder="Час завершення">
+        </div>
+        <button onclick="publishSpecialLot()" class="styled-button action-btn">Опублікувати лот</button>
+      </div>
+      <hr>
+      <h3 class="section-subheader">Активний особливий лот</h3>
+      <div id="activeSpecialLot" class="data-list"></div>
+    </div>
+
+    <div id="loans" class="section" style="display: none;">
+      <h2 class="section-header">Управління кредитами</h2>
+      <h3 class="section-subheader">Налаштування системи кредитування</h3>
+      <div class="form-group form-grid">
+        <label for="loanInterestRate">Відсоткова ставка (%):</label>
+        <input type="number" id="loanInterestRate" placeholder="Напр., 5">
+        <label for="loanMaxAmount">Максимальна сума кредиту (грн):</label>
+        <input type="number" id="loanMaxAmount" placeholder="Напр., 1000">
+        <label for="loanTermDays">Термін кредиту (авто-повернення, днів):</label>
+        <input type="number" id="loanTermDays" placeholder="Напр., 1">
+        <label class="checkbox-label" style="grid-column: 1 / -1;">
+          Автоматичне схвалення:
+          <input type="checkbox" id="loanAutoApprove">
+        </label>
+        <button onclick="saveLoanSettings()" class="styled-button action-btn full-width">Зберегти налаштування</button>
+      </div>
+      <h3 class="section-subheader">Запити на кредит</h3>
+      <div id="pendingLoansList" class="data-list"></div>
+      <h3 class="section-subheader">Активні кредити</h3>
+      <div id="activeLoansList" class="data-list"></div>
+    </div>
+
+    <div id="exchange" class="section" style="display: none;">
+      <h2 class="section-header">Управління біржею</h2>
+      <h3 class="section-subheader">Додати/Редагувати актив</h3>
+      <div class="form-group form-grid">
+        <select id="assetTypeSelect" class="full-width">
+          <option value="company">Акція компанії</option>
+          <option value="crypto">Криптовалюта</option>
+        </select>
+        <input type="text" id="assetName" placeholder="Назва (напр., TechCorp, Bitcoin)">
+        <input type="text" id="assetTicker" placeholder="Тікер (напр., TCH, BTC)">
+        <input type="number" id="assetInitialPrice" placeholder="Початкова ціна">
+        <button onclick="addOrUpdateAsset()" class="styled-button action-btn full-width">Додати/Оновити актив</button>
+      </div>
+      <h3 class="section-subheader">Ігрові новини (впливають на ціни)</h3>
+      <div class="form-group">
+        <select id="newsAssetSelect" class="full-width"></select>
+        <input type="number" id="newsImpact" placeholder="Вплив на ціну (у %)">
+        <textarea id="newsDescription" placeholder="Опис новини"></textarea>
+        <button onclick="publishGameNews()" class="styled-button action-btn">Опублікувати новину</button>
+      </div>
+      <h3 class="section-subheader">Список компаній (Акції)</h3>
+      <div id="companyList" class="data-list"></div>
+      <h3 class="section-subheader">Список криптовалют</h3>
+      <div id="cryptoList" class="data-list"></div>
+    </div>
+
+    <div id="insurance" class="section" style="display: none;">
+      <h2 class="section-header">Управління страхуванням</h2>
+      <h3 class="section-subheader">Налаштування страхування</h3>
+      <div id="insurance-options-container">
+      </div>
+      <div class="form-group form-grid">
+        <input type="text" id="newInsuranceDuration" placeholder="Тривалість (напр., 1h, 3d)">
+        <input type="number" id="newInsuranceCost" placeholder="Вартість (грн)">
+        <button onclick="addInsuranceOption()" class="styled-button action-btn full-width">Додати опцію</button>
+      </div>
+      <hr>
+      <h3 class="section-subheader">Ініціювати випадкову подію</h3>
+      <div class="form-group">
+        <select id="insuranceEvent" onchange="toggleEventOptions(this.value)" class="full-width">
+          <option value="crisis">Економічна криза (-10% балансу)</option>
+          <option value="theft">Крадіжка (-50 грн)</option>
+          <option value="market_crash">Обвал ринку акцій (-20% вартості всіх акцій)</option>
+          <option value="bank_robbery">Пограбування банку (втрата % від балансу для багатих)</option>
+          <option value="tech_boom">Технологічний бум (+5% до балансу для власників акцій)</option>
+          <option value="audit">Податковий аудит (випадковий штраф)</option>
+          <option value="good_harvest">Гарний врожай (ціни на їжу в магазині -15%)</option>
+          <option value="lottery_win">Неочікуваний виграш (+100 грн випадковому користувачу)</option>
+          <option value="charity">Благодійний внесок (-2% від балансу, +10 балів лояльності)</option>
+        </select>
+        <div id="eventOptionsContainer" class="form-grid full-width" style="display: none; margin-top: 1rem;">
+          <input type="number" id="eventOption1" placeholder="Параметр 1">
+          <input type="number" id="eventOption2" placeholder="Параметр 2">
+        </div>
+        <button onclick="triggerInsuranceEvent()" class="styled-button action-btn danger full-width">Запустити подію</button>
+      </div>
+      <h3 class="section-subheader">Застраховані користувачі</h3>
+      <div id="insuredUsersList" class="data-list"></div>
+    </div>
+
+    <div id="rewards" class="section" style="display: none;">
+      <h2 class="section-header">Центр винагород (Завдання)</h2>
+      <h3 class="section-subheader">Створити завдання</h3>
+      <div class="form-group">
+        <input type="text" id="taskName" placeholder="Назва завдання">
+        <textarea id="taskDescription" placeholder="Опис завдання"></textarea>
+        <div class="form-grid">
+          <input type="number" id="taskReward" placeholder="Винагорода (грн)">
+          <input type="number" id="taskLoyaltyPoints" placeholder="Винагорода (бали лояльності)">
+        </div>
+        <div class="form-grid">
+          <label class="checkbox-label">
+            <input type="checkbox" id="taskRequiresApproval"> Потребує підтвердження
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="taskRequiresFile"> Потребує файл
+          </label>
+        </div>
+        <button onclick="addTask()" class="styled-button action-btn">Додати завдання</button>
+      </div>
+      <h3 class="section-subheader">Завдання на перевірці</h3>
+      <div id="pendingSubmissionsList" class="data-list"></div>
+      <h3 class="section-subheader">Активні завдання</h3>
+      <div id="taskList" class="data-list"></div>
+    </div>
+
+    <div id="schedule" class="section" style="display: none;">
+      <h2 class="section-header">Планувальник ігрових подій</h2>
+      <h3 class="section-subheader">Додати подію до розкладу</h3>
+      <div class="form-group form-grid">
+        <input type="text" id="scheduleTime" placeholder="Час (напр., 08:00-08:30)" class="full-width">
+        <input type="text" id="scheduleActivity" placeholder="Назва події" class="full-width">
+        <button onclick="addScheduleItem()" class="styled-button action-btn full-width">Додати до розкладу</button>
+      </div>
+      <h3 class="section-subheader">Запланувати економічну подію</h3>
+      <div class="form-group form-grid">
+        <select id="economicEventType" class="full-width" onchange="toggleEconomicEventOptions(this.value)">
+          <option value="double_loyalty">Подвійні бали лояльності в магазині</option>
+          <option value="stock_change">Зміна акцій компанії</option>
+          <option value="market_boom">Ринковий бум (+ % до всіх акцій)</option>
+          <option value="inflation">Інфляція (- % від усіх балансів)</option>
+          <option value="no_commission">Перекази без комісії</option>
+          <option value="loan_discount">Знижка на відсоткову ставку кредиту</option>
+        </select>
+        <input type="datetime-local" id="eventStartTime" placeholder="Час початку">
+        <input type="datetime-local" id="eventEndTime" placeholder="Час завершення">
+        <div id="stockChangeEventOptions" style="display:none;" class="full-width form-grid">
+          <select id="eventCompanySelect"></select>
+          <input type="number" id="eventStockImpact" placeholder="Зміна ціни (у %)">
+        </div>
+        <div id="generalEventOptions" style="display:none;" class="full-width">
+          <input type="number" id="generalEventImpact" placeholder="Вплив (у %)">
+        </div>
+        <label class="checkbox-label full-width">
+          <input type="checkbox" id="addToScheduleCheckbox"> Додати до загального розкладу
+        </label>
+        <button onclick="scheduleEconomicEvent()" class="styled-button action-btn full-width">Запланувати</button>
+      </div>
+      <h3 class="section-subheader">Актуальний розклад та події</h3>
+      <div id="scheduleList" class="data-list"></div>
+    </div>
+
+    <div id="messages" class="section" style="display: none;">
+      <h2 class="section-header">Повідомлення</h2>
+      <h3 class="section-subheader">CEO_NEWS Розсилка</h3>
+      <div class="form-group">
+        <textarea id="ceoNewsText" placeholder="Текст важливої новини для всіх"></textarea>
+        <button onclick="sendCeoNews()" class="styled-button action-btn warning">Надіслати CEO_NEWS</button>
+      </div>
+      <hr>
+      <h3 class="section-subheader">Загальні та особисті повідомлення</h3>
+      <div class="form-group">
+        <textarea id="notificationText" placeholder="Текст загального оголошення"></textarea>
+        <button onclick="sendNotification()" class="styled-button action-btn">Надіслати оголошення</button>
+      </div>
+      <div class="form-group">
+        <input type="text" id="messageUser" placeholder="Отримувач (ім'я користувача)">
+        <textarea id="personalMessage" placeholder="Особисте повідомлення"></textarea>
+        <button onclick="sendPersonalMessage()" class="styled-button action-btn">Надіслати</button>
+      </div>
+      <h3 class="section-subheader">Історія повідомлень (надісланих адміном)</h3>
+      <div id="messageHistory" class="data-list"></div>
+    </div>
+
+    <div id="chat" class="section" style="display: none;">
+      <h2 class="section-header">Чат із користувачами</h2>
+      <div class="form-group">
+        <select id="chatUserSelect"><option value="">Оберіть користувача</option></select>
+      </div>
+      <div id="chatContainer" class="chat-container"></div>
+      <div class="form-group" style="margin-top: 1rem;">
+        <textarea id="chatMessageInput" placeholder="Напишіть повідомлення"></textarea>
+        <button onclick="sendChatMessage()" class="styled-button action-btn">Надіслати</button>
+      </div>
+    </div>
+
+    <div id="settings" class="section" style="display: none;">
+      <h2 class="section-header">Налаштування</h2>
+      <h3 class="section-subheader">Керування функціями</h3>
+      <div id="featureToggles" class="settings-grid">
+        <label class="checkbox-label"><input type="checkbox" data-feature="transfers" onchange="toggleFeature(this)"> Перекази</label>
+        <label class="checkbox-label"><input type="checkbox" data-feature="shop" onchange="toggleFeature(this)"> Магазин</label>
+        <label class="checkbox-label"><input type="checkbox" data-feature="auction" onchange="toggleFeature(this)"> Аукціон</label>
+        <label class="checkbox-label"><input type="checkbox" data-feature="loans" onchange="toggleFeature(this)"> Кредити</label>
+        <label class="checkbox-label"><input type="checkbox" data-feature="exchange" onchange="toggleFeature(this)"> Біржа</label>
+        <label class="checkbox-label"><input type="checkbox" data-feature="insurance" onchange="toggleFeature(this)"> Страхування</label>
+        <label class="checkbox-label"><input type="checkbox" data-feature="rewards" onchange="toggleFeature(this)"> Завдання</label>
+        <label class="checkbox-label"><input type="checkbox" data-feature="support" onchange="toggleFeature(this)"> Підтримка (Чат)</label>
+        <label class="checkbox-label"><input type="checkbox" data-feature="deposit" onchange="toggleFeature(this)"> Депозит</label>
+        <label class="checkbox-label"><input type="checkbox" data-feature="lottery" onchange="toggleFeature(this)"> Лотерея</label>
+        <label class="checkbox-label"><input type="checkbox" data-feature="dynamicEvents" onchange="toggleFeature(this)"> Динамічні події</label>
+      </div>
+      <hr>
+      <h3 class="section-subheader">Динамічна економіка</h3>
+      <div class="form-group form-grid">
+        <label for="creditCrisisThreshold">Поріг кредитної кризи (% користувачів з кредитом):</label>
+        <input type="number" id="creditCrisisThreshold" placeholder="Напр., 50">
+        <label for="crimeWaveThreshold">Поріг хвилі злочинності (% незастрахованих):</label>
+        <input type="number" id="crimeWaveThreshold" placeholder="Напр., 60">
+        <button onclick="saveDynamicSettings()" class="styled-button action-btn full-width">Зберегти динамічні налаштування</button>
+      </div>
+      <hr>
+      <h3 class="section-subheader">Загальні налаштування</h3>
+      <div class="form-group">
+        <label class="checkbox-label" style="justify-content: space-between;">
+          <span>Дозволити знижки за бали лояльності</span>
+          <input type="checkbox" id="loyaltyDiscountsEnabled" onchange="toggleLoyaltyDiscounts()">
+        </label>
+      </div>
+      <hr>
+      <h3 class="section-subheader">Керування даними</h3>
+      <div class="form-group">
+        <button onclick="exportData()" class="styled-button action-btn">Експортувати дані</button>
+        <button onclick="resetSystem()" class="styled-button action-btn danger">Скинути систему</button>
+      </div>
+    </div>
+
+    <div id="editUserModal" class="modal-overlay">
+      <div class="modal-content-panel">
+        <h3>Редагувати користувача</h3>
+        <div class="form-group">
+          <input type="text" id="editUsername" placeholder="Ім'я користувача" disabled>
+          <div class="form-grid">
+            <input type="number" id="editBalance" placeholder="Баланс">
+            <input type="number" id="editLoyaltyPoints" placeholder="Бали лояльності">
+          </div>
+          <input type="password" id="editPassword" placeholder="Новий пароль (залиште порожнім, щоб не змінювати)">
+          <label class="checkbox-label"><input type="checkbox" id="editBlocked"> Заблоковано</label>
+          <select id="editTeam"><option value="">Без команди</option></select>
+        </div>
+        <div class="form-group">
+          <h4>Зміна балансу</h4>
+          <input type="number" id="adjustAmount" placeholder="Сума (+/-)">
+          <input type="text" id="adjustComment" placeholder="Коментар до транзакції">
+          <button onclick="adjustBalance()" class="styled-button action-btn">Змінити баланс</button>
+        </div>
+        <div class="modal-buttons">
+          <button onclick="forceRepayLoan()" class="styled-button action-btn warning">Погасити кредит</button>
+          <button onclick="editPassport()" class="styled-button action-btn warning">Паспорт</button>
+          <button onclick="saveUserChanges()" class="styled-button action-btn">Зберегти</button>
+          <button onclick="deleteUser()" class="styled-button action-btn danger">Видалити</button>
+          <button onclick="closeModal('editUserModal')" class="styled-button action-btn close-btn">Закрити</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="editPassportModal" class="modal-overlay">
+      <div class="modal-content-panel">
+        <h3>Редагувати паспорт</h3>
+        <div class="form-group">
+          <div class="form-grid">
+            <input type="text" id="editPassportSurname" placeholder="Прізвище">
+            <input type="text" id="editPassportName" placeholder="Ім'я">
+          </div>
+          <input type="text" id="editPassportDOB" placeholder="Дата народження (РРРР-ММ-ДД)">
+          <input type="text" id="editPassportNumber" placeholder="Номер паспорта">
+          <input type="text" id="editPassportRoom" placeholder="Номер кімнати">
+          <input type="text" id="editPassportPhoto" placeholder="Шлях до фото (напр., ./foto1.png)">
+        </div>
+        <div class="modal-buttons">
+          <button onclick="savePassport()" class="styled-button action-btn">Зберегти паспорт</button>
+          <button onclick="closeModal('editPassportModal')" class="styled-button action-btn close-btn">Закрити</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="script.js" defer></script>
+
+</body>
+</html>

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C.E.O. - Банк</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="./logo.png" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/js/shepherd.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/css/shepherd.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator/qrcode.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+
+<div class="header" id="menu" style="display: none;">
+  <div class="header-left">
+    <img src="./logo.png" alt="Логотип C.E.O. Банк" class="header-logo" onerror="this.src='https.placehold.co/35x35/e9ecef/212529?text=CEO';">
+    <h1 id="greeting">Вітаємо!</h1>
+  </div>
+  <div class="header-right">
+    <button class="icon-button" onclick="showNotificationsModal()" aria-label="Сповіщення">
+      🔔<span id="notification-badge" class="notification-badge" style="display: none;"></span>
+    </button>
+    <button class="logout-btn" onclick="logout()">Вийти</button>
+  </div>
+</div>
+
+<div class="container">
+  <div id="login" class="login-section">
+    <img src="./logo.png" alt="Логотип C.E.O. Банк" class="login-logo" onerror="this.src='https.placehold.co/80x80/e9ecef/212529?text=CEO';">
+    <h2>Вхід до C.E.O. Банку</h2>
+    <p class="login-subtitle">Ваш надійний фінансовий партнер</p>
+    <div class="form-group">
+      <div class="input-container">
+        <input required type="text" id="username" class="styled-input" placeholder=" ">
+        <label class="input-label">Ім'я користувача</label>
+      </div>
+      <div class="input-container">
+        <input required type="password" id="password" class="styled-input" placeholder=" ">
+        <label class="input-label">Пароль</label>
+      </div>
+      <button class="action-button primary-button" onclick="login()">Увійти</button>
+    </div>
+  </div>
+
+  <div id="app-content" style="display: none;">
+    <div id="profile" class="profile-section">
+      <div class="card-container">
+        <div class="card" onclick="flipCard()" role="button" tabindex="0" aria-label="Натисніть, щоб перевернути картку">
+          <div class="card-front">
+            <div class="card-header">
+              <img src="./logo.png" alt="Логотип Банку" class="card-logo" onerror="this.src='https.placehold.co/40x40/ffffff/007bff?text=CEO';">
+              <span class="card-type">PREMIUM</span>
+            </div>
+            <div class="card-chip"></div>
+            <div class="card-number" id="cardNumber">**** **** **** ****</div>
+            <div class="card-details-front">
+              <div>
+                <span class="card-label">Власник</span>
+                <span class="card-value" id="userName">Ім'я Прізвище</span>
+              </div>
+              <div>
+                <span class="card-label">Дійсна до</span>
+                <span class="card-value">10/25</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-back">
+            <div class="magnetic-strip"></div>
+            <div class="card-back-details">
+              <div class="signature-strip">
+                <span class="card-cvv" id="cvvCode">***</span>
+              </div>
+              <img id="ownerPhoto" src="./foto1.png" alt="Фото власника" class="card-owner-photo" onerror="this.src='https.placehold.co/50x60/ffffff/333333?text=Фото';">
+            </div>
+            <p class="card-info-text">Ця картка є власністю C.E.O. Банку.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="balance-display">
+        <span class="balance-amount" id="balance">0.00</span>
+        <span class="balance-currency">грн</span>
+      </div>
+    </div>
+
+    <div class="quick-actions-grid">
+      <button id="send-money-btn" class="action-card" onclick="showSendMoney()">
+        <span class="action-icon">💸</span>
+        <span class="action-label">Переказ</span>
+      </button>
+      <button id="deposit-btn" class="action-card" onclick="showDeposit()">
+        <span class="action-icon">📈</span>
+        <span class="action-label">Депозит</span>
+      </button>
+      <button id="auction-btn" class="action-card" onclick="showAuction()">
+        <span class="action-icon">⚖️</span>
+        <span class="action-label">Аукціон</span>
+      </button>
+      <button id="shop-btn" class="action-card" onclick="showShop()">
+        <span class="action-icon">🛍️</span>
+        <span class="action-label">Магазин</span>
+      </button>
+    </div>
+
+    <div id="ceoNewsTicker" class="news-ticker-section" style="display: none;">
+      <h3>📢 CEO NEWS</h3>
+      <div id="news-content"></div>
+    </div>
+
+    <div id="transactions" class="transactions-section">
+      <h3>Історія транзакцій</h3>
+      <div id="transactionList"></div>
+      <button id="moreBtn" class="action-button secondary-button" onclick="showMoreTransactions()" style="display: none;">Дивитись більше</button>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-nav" id="bottom-bar" style="display: none;">
+  <button class="nav-btn active" onclick="showMainScreen()">
+    <span class="nav-icon">🏠</span>
+    <span class="nav-label">Головна</span>
+  </button>
+  <button id="schedule-nav-btn" class="nav-btn" onclick="showSchedule()">
+    <span class="nav-icon">🗓️</span>
+    <span class="nav-label">Розклад</span>
+  </button>
+  <button id="exchange-nav-btn" class="nav-btn" onclick="showExchange()">
+    <span class="nav-icon">💹</span>
+    <span class="nav-label">Біржа</span>
+  </button>
+  <button id="profile-nav-btn" class="nav-btn" onclick="showPersonalInfo()">
+    <span class="nav-icon">👤</span>
+    <span class="nav-label">Профіль</span>
+  </button>
+  <button id="rewards-nav-btn" class="nav-btn" onclick="showRewards()">
+    <span class="nav-icon">🎁</span>
+    <span class="nav-label">Завдання</span>
+  </button>
+  <button id="support-nav-btn" class="nav-btn" onclick="showSupport()">
+    <span class="nav-icon">💬</span>
+    <span class="nav-label">Підтримка</span>
+  </button>
+</div>
+
+
+<div id="welcomeModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeWelcomeModal()" aria-label="Закрити">×</span>
+    <h3>Вітаємо, CEO! 🎉</h3>
+    <p>Керуй своїми фінансами легко та сучасно!</p>
+    <button class="action-button primary-button" onclick="closeWelcomeModal()">Розпочати</button>
+  </div>
+</div>
+
+<div id="depositModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('depositModal')" aria-label="Закрити">×</span>
+    <h3>Депозит</h3>
+    <div class="balance-summary">💰 Баланс: <span id="balanceDeposit">0.00</span> грн</div>
+    <div class="form-group">
+      <input type="number" id="depositAmount" placeholder="Сума депозиту" class="styled-input">
+      <button id="makeDepositBtn" class="action-button primary-button" onclick="makeDeposit()">Зробити депозит</button>
+    </div>
+    <p id="timer" class="deposit-timer"></p>
+  </div>
+</div>
+
+<div id="rewardsModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('rewardsModal')" aria-label="Закрити">×</span>
+    <h3>Центр завдань</h3>
+    <div id="tasksList" class="tasks-list-container"></div>
+  </div>
+</div>
+
+<div id="taskDetailModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('taskDetailModal')" aria-label="Закрити">×</span>
+    <h3 id="taskDetailName"></h3>
+    <p id="taskDetailDescription"></p>
+    <p><strong>Нагорода:</strong> <span id="taskDetailReward"></span></p>
+    <div id="taskFileInputGroup" class="form-group" style="display: none;">
+      <label for="taskFileInput">Прикріпіть файл для підтвердження:</label>
+      <input type="file" id="taskFileInput" class="styled-input">
+    </div>
+    <button id="submitTaskBtn" class="action-button primary-button">Надіслати на перевірку</button>
+  </div>
+</div>
+
+<div id="personalModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('personalModal')" aria-label="Закрити">×</span>
+    <h3>Особиста інформація</h3>
+    <div class="passport-container">
+      <div class="passport-card-display">
+        <div class="passport-header-display">
+          <img src="./ua_flag.png" alt="Прапор України" class="passport-flag-display" onerror="this.style.display='none';">
+          <h4>УКРАЇНА / UKRAINE</h4>
+        </div>
+        <div class="passport-body-display">
+          <img id="passportPhoto" src="./foto1.png" alt="Фото" class="passport-photo-display" onerror="this.src='https://placehold.co/70x90/7894c9/e0e0e0?text=Фото';">
+          <div class="passport-details-display">
+            <p><strong>Прізвище:</strong> <span id="passportSurname"></span></p>
+            <p><strong>Ім'я:</strong> <span id="passportName"></span></p>
+            <p><strong>Дата народження:</strong> <span id="passportDOB"></span></p>
+            <p><strong>Номер паспорта:</strong> <span id="passportNumber"></span></p>
+            <p><strong>Номер кімнати:</strong> <span id="passportRoom"></span></p>
+            <p><strong>Бали лояльності:</strong> <span id="loyaltyPoints">0</span></p>
+          </div>
+        </div>
+      </div>
+      <div class="profile-actions">
+        <button class="action-button secondary-button" onclick="showQrCodeModal()">Мій QR-код</button>
+        <button id="loan-profile-btn" class="action-button secondary-button" onclick="showLoanModal()">Кредит</button>
+        <button id="insurance-profile-btn" class="action-button secondary-button" onclick="showInsuranceModal()">Страхування</button>
+        <button class="action-button secondary-button" onclick="showEventHistoryModal()">Історія покупок</button>
+        <button class="action-button reward-button" onclick="showMyWinningsModal()">Мої виграші</button>
+      </div>
+    </div>
+    <h3>Статистика</h3>
+    <div class="stats-grid">
+      <div class="stat-item"><h4>Транзакцій</h4><p id="totalTransactions">0</p></div>
+      <div class="stat-item"><h4>Зароблено</h4><p id="depositEarnings">0 грн</p></div>
+      <div class="stat-item"><h4>Надіслано</h4><p id="totalSent">0 грн</p></div>
+    </div>
+    <h4>Витрати та доходи</h4>
+    <div class="form-group">
+      <select id="statsPeriod" onchange="updateExpenseChart()" class="styled-select">
+        <option value="day">День</option>
+        <option value="week" selected>Тиждень</option>
+        <option value="month">Місяць</option>
+      </select>
+    </div>
+    <div class="chart-wrapper"><canvas id="expenseChart"></canvas></div>
+  </div>
+</div>
+
+<div id="sendMoneyModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('sendMoneyModal')" aria-label="Закрити">×</span>
+    <h3>Переказ коштів</h3>
+    <div class="balance-summary">💰 Баланс: <span id="balanceSendMoney">0.00</span> грн</div>
+    <div id="qr-reader" style="width: 100%; margin-bottom: 1rem; border-radius: var(--border-radius-md); overflow: hidden;"></div>
+    <div id="qr-reader-results" style="display:none;"></div>
+    <div class="form-group">
+      <input type="number" id="sendAmount" placeholder="Сума" class="styled-input">
+      <input type="text" id="sendTo" placeholder="Отримувач" class="styled-input">
+      <button class="action-button secondary-button" onclick="startQrScanner()">Сканувати QR</button>
+      <button id="sendBtn" class="action-button primary-button" onclick="confirmSendMoney()">Надіслати</button>
+    </div>
+  </div>
+</div>
+
+<div id="shopModal" class="modal">
+  <div class="modal-content shop-modal-content">
+    <div class="shop-header-controls">
+      <h3>🛍️ Магазин</h3>
+      <div class="header-buttons-group">
+        <button class="action-button cart-button" onclick="showCart()">🛒 (<span id="cartCountModal">0</span>)</button>
+      </div>
+      <span class="modal-close-btn shop-close-btn" onclick="closeModal('shopModal')" aria-label="Закрити">×</span>
+    </div>
+    <div class="balance-summary shop-balance">💰 Баланс: <span id="balanceShop">0.00</span> грн</div>
+    <div class="loyalty-info">💎 Бали лояльності: <span id="loyaltyPointsShop">0</span></div>
+    <div class="shop-filters-controls">
+      <select id="shopSort" onchange="sortShopItems()" class="styled-select">
+        <option value="default">Сортувати</option>
+        <option value="price-low">Ціна: ↓</option>
+        <option value="price-high">Ціна: ↑</option>
+        <option value="popularity">Популярність</option>
+      </select>
+    </div>
+    <div class="shop-items-grid" id="shopItems"></div>
+  </div>
+</div>
+
+<div id="cartModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('cartModal')" aria-label="Закрити">×</span>
+    <h3>🛒 Ваш кошик</h3>
+    <div id="cartItems"></div>
+    <div class="cart-summary">
+      <p>Сума: <span id="cartSubtotal">0.00</span> грн</p>
+      <p>Знижка за бали: <span id="cartLoyaltyDiscount">0.00</span> грн</p>
+      <p id="cartTotal" class="cart-total-amount">Всього: 0.00 грн</p>
+    </div>
+    <div class="form-group">
+      <button class="action-button primary-button" onclick="checkoutCart()">Оформити покупку</button>
+    </div>
+  </div>
+</div>
+
+<div id="auctionModal" class="modal">
+    <div class="modal-content auction-modal-content">
+        <span class="modal-close-btn" onclick="closeModal('auctionModal')">×</span>
+        <h3>⚖️ Аукціон</h3>
+
+        <div id="generalAuctionSection">
+            <h4>Загальний аукціон (Live)</h4>
+            <div id="auctionTimer" class="auction-timer">Аукціон неактивний</div>
+            <div class="auction-info-panel" id="generalAuctionInfoPanel">
+                <p>Найвища ставка: <strong id="highestBidInfo">0.00 грн</strong></p>
+            </div>
+            <div class="form-group" id="generalAuctionForm">
+                <input type="number" id="auctionBidAmount" placeholder="Ваша ставка" class="styled-input">
+                <button class="action-button auction-button" onclick="placeGeneralAuctionBid()">Зробити ставку</button>
+            </div>
+        </div>
+
+        <hr style="margin: 1.5rem 0;">
+
+        <div id="specialAuctionSection">
+            <h4>Особливий Лот</h4>
+            <div id="specialAuctionContainer" style="display: none;">
+                <h4 id="specialLotName" style="border-bottom: none; color: var(--text-primary);"></h4>
+                <img id="specialLotImage" src="" alt="Зображення лоту" style="max-width: 150px; border-radius: 8px; margin: 0 auto 1rem auto; display: none;">
+                <p id="specialLotDescription"></p>
+                <div class="auction-info-panel">
+                    <p>Найвища ставка: <strong id="specialHighestBidInfo">0.00 грн</strong></p>
+                </div>
+                <div class="form-group">
+                    <input type="number" id="specialAuctionBidAmount" placeholder="Ваша ставка" class="styled-input">
+                    <button class="action-button auction-button full-width" onclick="placeSpecialAuctionBid()">Зробити ставку</button>
+                </div>
+            </div>
+            <p id="noSpecialLotMessage" class="no-transactions">Активних особливих лотів немає.</p>
+            <div id="bidHistory" class="bid-history" style="display: none;">
+                <h4>Історія ставок</h4>
+                <ul id="bidHistoryList"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="qrCodeModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('qrCodeModal')">×</span>
+    <h3>Мій QR-код для переказів</h3>
+    <div id="qrcode-display" style="display: flex; justify-content: center; padding: 1rem; background: white; border-radius: var(--border-radius-md);"></div>
+    <p class="login-subtitle">Покажіть цей код, щоб отримати переказ.</p>
+  </div>
+</div>
+
+<div id="loanModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('loanModal')">×</span>
+    <h3>Управління кредитом</h3>
+    <div id="loanInfo">
+      <p><strong>Поточний борг:</strong> <span id="loanDebt">0.00</span> грн</p>
+      <p><strong>Максимальний кредит:</strong> <span id="loanMax">1000.00</span> грн</p>
+      <p><strong>Відсоткова ставка:</strong> <span id="loanRate">5</span>%</p>
+    </div>
+    <div id="pendingLoanInfo" style="display: none;">
+      <p><strong>Запит на розгляді:</strong> <span id="pendingLoanAmount">0.00</span> грн</p>
+    </div>
+    <div class="form-group">
+      <input type="number" id="loanRequestAmount" placeholder="Сума запиту" class="styled-input">
+      <button class="action-button primary-button" onclick="requestLoan()">Взяти кредит</button>
+    </div>
+    <div class="form-group">
+      <input type="number" id="loanRepayAmount" placeholder="Сума погашення" class="styled-input">
+      <button class="action-button secondary-button" onclick="repayLoan()">Погасити кредит</button>
+    </div>
+  </div>
+</div>
+
+<div id="exchangeModal" class="modal">
+  <div class="modal-content shop-modal-content">
+    <span class="modal-close-btn" onclick="closeModal('exchangeModal')">×</span>
+    <h3>💹 Фондова біржа</h3>
+    <div class="balance-summary shop-balance">💰 Баланс: <span id="balanceExchange">0.00</span> грн</div>
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="showExchangeTab('stocks')">Акції</button>
+      <button class="tab-btn" onclick="showExchangeTab('crypto')">Криптовалюта</button>
+    </div>
+    <div id="stockMarket" class="tasks-list-container"></div>
+    <div id="cryptoMarket" class="tasks-list-container" style="display:none;"></div>
+  </div>
+</div>
+
+<div id="stockDetailModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('stockDetailModal')">×</span>
+    <h3 id="stockDetailName"></h3>
+    <p>Ваші активи: <span id="userStockCount">0</span></p>
+    <p>Поточна ціна: <span id="currentStockPrice">0.00</span> грн</p>
+    <div class="chart-wrapper"><canvas id="stockHistoryChart"></canvas></div>
+    <div class="form-group form-grid">
+      <input type="number" id="stockActionAmount" placeholder="Кількість">
+      <select id="stockActionType" class="styled-select">
+        <option value="buy">Купити</option>
+        <option value="sell">Продати</option>
+      </select>
+    </div>
+    <button class="action-button primary-button" onclick="performStockAction()">Виконати</button>
+  </div>
+</div>
+
+<div id="insuranceModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('insuranceModal')">×</span>
+    <h3>🛡️ Страхування</h3>
+    <div id="insuranceStatus"></div>
+    <p class="login-subtitle">Застрахуйте себе від випадкових ігрових подій, таких як економічна криза або крадіжка.</p>
+    <div id="insuranceOptionsContainer" class="tasks-list-container">
+    </div>
+  </div>
+</div>
+
+<div id="myWinningsModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('myWinningsModal')" aria-label="Закрити">×</span>
+    <h3>🎟️ Мої виграші (Лотерейні квитки)</h3>
+    <div id="lotteryTicketsList" class="lottery-tickets-grid">
+      <p class="no-transactions">У вас немає куплених лотерейних квитків.</p>
+    </div>
+  </div>
+</div>
+
+
+<div id="eventHistoryModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('eventHistoryModal')" aria-label="Закрити">×</span>
+    <h3>📜 Історія покупок</h3>
+    <div id="eventHistoryList" class="tasks-list-container">
+      <p class="no-transactions">У вас ще немає записів в історії.</p>
+    </div>
+  </div>
+</div>
+
+<div id="scheduleModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('scheduleModal')" aria-label="Закрити">×</span>
+    <h3>🗓️ Розклад дня</h3>
+    <div id="scheduleDisplay" class="schedule-display-container">
+      <p>Розклад завантажується...</p>
+    </div>
+  </div>
+</div>
+
+<div id="confirmModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('confirmModal')" aria-label="Закрити">×</span>
+    <h3>Підтвердження</h3>
+    <p id="confirmMessage" class="confirm-text">Ви впевнені?</p>
+    <div class="form-group confirm-buttons">
+      <button class="action-button primary-button" onclick="executeConfirmedAction()">Так</button>
+      <button class="action-button secondary-button" onclick="closeModal('confirmModal')">Ні</button>
+    </div>
+  </div>
+</div>
+
+<div id="supportModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('supportModal')" aria-label="Закрити">×</span>
+    <div class="support-header">
+      <img src="./logo.png" alt="kdAI" class="support-logo" onerror="this.src='https://placehold.co/60x60/e9ecef/212529?text=AI';">
+      <h3>kdAI</h3>
+      <p>Ваш фінансовий помічник</p>
+    </div>
+    <div id="aiHistory" class="ai-history-log"></div>
+    <div class="support-input-group">
+      <input type="text" id="supportQuestion" placeholder="Ваше запитання..." class="styled-input" onkeydown="if(event.key==='Enter') askKdAI()">
+      <button class="icon-button" onclick="askKdAI()">▶️</button>
+      <button class="icon-button" onclick="startVoiceInput()">🎙️</button>
+    </div>
+  </div>
+</div>
+
+<div id="notificationsModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" onclick="closeModal('notificationsModal')" aria-label="Закрити">×</span>
+    <div class="notifications-header">
+      <h3>🔔 Сповіщення</h3>
+      <button class="action-button danger-button" onclick="clearNotifications()">Очистити все</button>
+    </div>
+    <div id="notificationList" class="notifications-list-container"></div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
