@@ -201,7 +201,7 @@ input:-webkit-autofill + .input-label {
   width: 100%;
   aspect-ratio: 1.586 / 1; /* Credit card ratio */
   position: relative;
-  transform-style: preserve-3d; /* <-- ДОДАЙТЕ ЦЕЙ РЯДОК */
+  transform-style: preserve-3d;
   transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   border-radius: var(--border-radius-lg);
   box-shadow: 0 10px 30px rgba(0,0,0,0.3);
@@ -231,13 +231,7 @@ input:-webkit-autofill + .input-label {
 }
 @keyframes rotateGradient { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-.card-back {
-  transform: rotateY(180deg);
-  /* Прямо вказуємо фон для зворотньої сторони та додаємо властивості для кращої 3D-обробки */
-  background: linear-gradient(235deg, #4b5563, #374151);
-  -webkit-backface-visibility: hidden; /* для кращої сумісності з Safari */
-  transform-style: preserve-3d;
-}
+.card-back { transform: rotateY(180deg); }
 .card.flipped { transform: rotateY(180deg); }
 
 .card-header { display: flex; justify-content: space-between; align-items: center; z-index: 1; }
