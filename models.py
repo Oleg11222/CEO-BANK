@@ -1,7 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Ініціалізація розширення SQLAlchemy
 db = SQLAlchemy()
@@ -52,38 +52,36 @@ class User(db.Model):
     # Зв'язки
     passport = db.relationship('Passport', backref='user', uselist=False, cascade="all, delete-orphan")
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=True)
-    transactions = db.relationship('Transaction', backref='user', lazy=True, cascade="all, delete-orphan")
-    notifications = db.relationship('Notification', backref='user', lazy=True, cascade="all, delete-orphan")
-    task_submissions = db.relationship('TaskSubmission', backref='user', lazy=True, cascade="all, delete-orphan")
+    transactions = db.relationship('Transaction', backref='user', lazy='dynamic', cascade="all, delete-orphan")
+    notifications = db.relationship('Notification', backref='user', lazy='dynamic', cascade="all, delete-orphan")
+    task_submissions = db.relationship('TaskSubmission', backref='user', lazy='dynamic', cascade="all, delete-orphan")
     completed_tasks = db.relationship('Task', secondary=completed_tasks, lazy='subquery',
                                       backref=db.backref('completed_by', lazy=True))
     loan = db.relationship('Loan', backref='user', uselist=False, cascade="all, delete-orphan")
     assets = db.relationship('UserAsset', back_populates='user', cascade="all, delete-orphan")
-    lottery_tickets = db.relationship('LotteryTicket', backref='user', lazy=True, cascade="all, delete-orphan")
-    won_lots = db.relationship('WonLot', backref='user', lazy=True, cascade="all, delete-orphan")
+    lottery_tickets = db.relationship('LotteryTicket', backref='user', lazy='dynamic', cascade="all, delete-orphan")
+    won_lots = db.relationship('WonLot', backref='user', lazy='dynamic', cascade="all, delete-orphan")
     messages_sent = db.relationship('ChatMessage', foreign_keys='ChatMessage.from_user_id', backref='sender', lazy=True)
     messages_received = db.relationship('ChatMessage', foreign_keys='ChatMessage.to_user_id', backref='recipient', lazy=True)
 
-# Новий, виправлений код
     def set_password(self, password):
-    # Ми явно вказуємо використовувати інший, більш сумісний метод хешування
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
-    def check_password(self, password):
-        # Для сумісності зі старим "simpleHash" з вашого JS
-        # Якщо пароль не був оновлений на сервері, він буде у старому форматі
-        try:
-            # Спроба перевірити за новим, безпечним методом
-            return check_password_hash(self.password_hash, password)
-        except Exception:
-            # Якщо виникає помилка (старий формат), перевіряємо старим методом
-            return self.password_hash == self._simple_hash(password)
 
-    def _simple_hash(self, s):
-        hash_val = 0
-        for char in s:
-            hash_val = (hash_val << 5) - hash_val + ord(char)
-            hash_val |= 0  # Convert to 32bit integer
-        return str(hash_val)
+    def check_password(self, password):
+        # Перевіряємо, чи хеш є стандартним для Werkzeug (містить '$')
+        if '$' in self.password_hash:
+            return check_password_hash(self.password_hash, password)
+        else:
+            # Якщо ні, це старий хеш з JS. Порівнюємо напряму.
+            # Це потрібно для міграції. Після першого успішного входу
+            # пароль буде перехешовано новим методом.
+            def _simple_hash(s):
+                hash_val = 0
+                for char in s:
+                    hash_val = (hash_val << 5) - hash_val + ord(char)
+                    hash_val |= 0
+                return str(hash_val)
+            return self.password_hash == _simple_hash(password)
         
     def to_dict(self, include_sensitive=False):
         user_dict = {
@@ -96,22 +94,22 @@ class User(db.Model):
             'photo': self.photo,
             'team': self.team.name if self.team else None,
             'passport': self.passport.to_dict() if self.passport else None,
-            'loan': self.loan.to_dict() if self.loan else {'amount': 0, 'interest_rate': 0, 'taken_date': None, 'is_pending': False, 'pending_amount': 0},
+            'loan': self.loan.to_dict() if self.loan else None,
             'isInsured': self.is_insured,
             'insuranceEndTime': self.insurance_end_time.isoformat() if self.insurance_end_time else None,
             'hasCompletedTour': self.has_completed_tour
         }
         if include_sensitive:
-            # Тут можна додати поля, які потрібні тільки самому користувачу
             user_dict['depositAmount'] = self.deposit_amount
             user_dict['depositEndTime'] = self.deposit_end_time.isoformat() if self.deposit_end_time else None
-            user_dict['transactions'] = [t.to_dict() for t in self.transactions]
-            user_dict['notifications'] = sorted([n.to_dict() for n in self.notifications], key=lambda x: x['date'], reverse=True)
+            # Використовуємо .all() для завантаження даних з lazy='dynamic' зв'язків
+            user_dict['transactions'] = [t.to_dict() for t in self.transactions.order_by(desc(Transaction.date)).limit(50).all()]
+            user_dict['notifications'] = [n.to_dict() for n in self.notifications.order_by(desc(Notification.date)).limit(50).all()]
             user_dict['completedTasks'] = [task.id for task in self.completed_tasks]
-            user_dict['taskSubmissions'] = [sub.to_dict() for sub in self.task_submissions]
+            user_dict['taskSubmissions'] = [sub.to_dict() for sub in self.task_submissions.all()]
             user_dict['stocks'] = {ua.asset.ticker: ua.quantity for ua in self.assets if ua.asset.type == 'stock'}
             user_dict['crypto'] = {ua.asset.ticker: ua.quantity for ua in self.assets if ua.asset.type == 'crypto'}
-            user_dict['lotteryTickets'] = [lt.to_dict() for lt in self.lottery_tickets]
+            user_dict['lotteryTickets'] = [lt.to_dict() for lt in self.lottery_tickets.all()]
             
         return user_dict
 
@@ -121,18 +119,12 @@ class Passport(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
     surname = db.Column(db.String(100))
     name = db.Column(db.String(100))
-    dob = db.Column(db.String(20)) # Зберігаємо як рядок для гнучкості
+    dob = db.Column(db.String(20)) 
     number = db.Column(db.String(20), unique=True)
     room = db.Column(db.String(20))
 
     def to_dict(self):
-        return {
-            'surname': self.surname,
-            'name': self.name,
-            'dob': self.dob,
-            'number': self.number,
-            'room': self.room,
-        }
+        return { 'surname': self.surname, 'name': self.name, 'dob': self.dob, 'number': self.number, 'room': self.room }
 
 class Team(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -146,18 +138,14 @@ class Transaction(db.Model):
     amount = db.Column(db.Float)
     is_positive = db.Column(db.Boolean)
     comment = db.Column(db.String(300))
-    date = db.Column(db.DateTime, default=datetime.utcnow)
-    details = db.Column(db.Text) # Зберігаємо JSON як текст
+    date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    details = db.Column(db.Text)
 
     def to_dict(self):
         return {
-            'id': self.id,
-            'action': self.action,
-            'amount': self.amount,
-            'isPositive': self.is_positive,
-            'date': self.date.isoformat(),
-            'comment': self.comment,
-            'details': json.loads(self.details) if self.details else None
+            'id': self.id, 'action': self.action, 'amount': self.amount,
+            'isPositive': self.is_positive, 'date': self.date.isoformat(),
+            'comment': self.comment, 'details': json.loads(self.details) if self.details else None
         }
 
 class ShopItem(db.Model):
@@ -175,17 +163,11 @@ class ShopItem(db.Model):
     
     def to_dict(self):
         return {
-            'id': self.id,
-            'name': self.name,
-            'price': self.price,
-            'discountPrice': self.discount_price,
-            'quantity': self.quantity,
-            'category': self.category,
-            'description': self.description,
-            'image': self.image,
-            'isLottery': self.is_lottery,
-            'lotteryMaxTicketsUser': self.lottery_max_tickets_user,
-            'popularity': self.popularity
+            'id': self.id, 'name': self.name, 'price': self.price,
+            'discountPrice': self.discount_price, 'quantity': self.quantity,
+            'category': self.category, 'description': self.description,
+            'image': self.image, 'isLottery': self.is_lottery,
+            'lotteryMaxTicketsUser': self.lottery_max_tickets_user, 'popularity': self.popularity
         }
 
 class Task(db.Model):
@@ -199,13 +181,9 @@ class Task(db.Model):
 
     def to_dict(self):
         return {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-            'reward': self.reward,
-            'loyaltyPoints': self.loyalty_points,
-            'requiresApproval': self.requires_approval,
-            'requiresFile': self.requires_file
+            'id': self.id, 'name': self.name, 'description': self.description,
+            'reward': self.reward, 'loyaltyPoints': self.loyalty_points,
+            'requiresApproval': self.requires_approval, 'requiresFile': self.requires_file
         }
 
 class TaskSubmission(db.Model):
@@ -214,15 +192,12 @@ class TaskSubmission(db.Model):
     task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
     status = db.Column(db.String(20), default='pending') # pending, approved, rejected
     file_path = db.Column(db.String(255), nullable=True)
-    date = db.Column(db.DateTime, default=datetime.utcnow)
+    date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     def to_dict(self):
         return {
-            'id': self.id,
-            'taskId': self.task_id,
-            'status': self.status,
-            'file': self.file_path,
-            'date': self.date.isoformat()
+            'id': self.id, 'taskId': self.task_id, 'status': self.status,
+            'file': self.file_path, 'date': self.date.isoformat()
         }
 
 class Loan(db.Model):
@@ -236,11 +211,9 @@ class Loan(db.Model):
     
     def to_dict(self):
         return {
-            'amount': self.amount,
-            'interestRate': self.interest_rate,
+            'amount': self.amount, 'interestRate': self.interest_rate,
             'takenDate': self.taken_date.isoformat() if self.taken_date else None,
-            'isPending': self.is_pending,
-            'pendingAmount': self.pending_amount
+            'isPending': self.is_pending, 'pendingAmount': self.pending_amount
         }
 
 class Asset(db.Model):
@@ -254,22 +227,19 @@ class Asset(db.Model):
     
     def to_dict(self):
         return {
-            'name': self.name,
-            'ticker': self.ticker,
-            'price': self.price,
-            'type': self.type,
-            'history': [h.price for h in self.history[-30:]] # Обмежимо історію
+            'name': self.name, 'ticker': self.ticker, 'price': self.price,
+            'type': self.type, 'history': [h.price for h in self.history[-30:]]
         }
         
 class AssetHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     asset_id = db.Column(db.Integer, db.ForeignKey('asset.id'), nullable=False)
     price = db.Column(db.Float, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 class InsuranceOption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    duration = db.Column(db.String(20), nullable=False) # "1h", "3d"
+    duration = db.Column(db.String(20), nullable=False)
     cost = db.Column(db.Float, nullable=False)
 
 class ScheduleItem(db.Model):
@@ -282,7 +252,7 @@ class EconomicEvent(db.Model):
     type = db.Column(db.String(50), nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
-    details = db.Column(db.Text) # JSON as text
+    details = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=False)
     add_to_schedule = db.Column(db.Boolean, default=True)
 
@@ -290,53 +260,43 @@ class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     text = db.Column(db.Text, nullable=False)
-    date = db.Column(db.DateTime, default=datetime.utcnow)
+    date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     read = db.Column(db.Boolean, default=False)
     
     def to_dict(self):
-        return {
-            'id': self.id,
-            'text': self.text,
-            'date': self.date.isoformat(),
-            'read': self.read
-        }
+        return { 'id': self.id, 'text': self.text, 'date': self.date.isoformat(), 'read': self.read }
 
 class ChatMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     from_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    to_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # Може бути ID адміна
+    to_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # Може бути None для загального чату
     text = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     read = db.Column(db.Boolean, default=False)
 
 class GlobalSetting(db.Model):
     key = db.Column(db.String(100), primary_key=True)
-    value = db.Column(db.Text, nullable=False) # Зберігаємо значення як JSON-рядок
+    value = db.Column(db.Text, nullable=False)
 
 class LotteryTicket(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     item_id = db.Column(db.Integer, db.ForeignKey('shop_item.id'), nullable=False)
     ticket_number = db.Column(db.Integer, nullable=False)
-    purchase_date = db.Column(db.DateTime, default=datetime.utcnow)
+    purchase_date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
-        return {
-            'id': self.id,
-            'itemId': self.item_id,
-            'ticketNumber': self.ticket_number
-        }
+        return { 'id': self.id, 'itemId': self.item_id, 'ticketNumber': self.ticket_number }
         
 class WonLot(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    type = db.Column(db.String(50)) # 'auction', 'special_auction'
+    type = db.Column(db.String(50))
     name = db.Column(db.String(200))
     prize = db.Column(db.Text)
-    date = db.Column(db.DateTime, default=datetime.utcnow)
+    date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 class AuctionState(db.Model):
-    # Зберігаємо стан аукціонів тут
     id = db.Column(db.Integer, primary_key=True)
-    key = db.Column(db.String(50), unique=True) # e.g., 'general_auction', 'special_lot'
-    state_json = db.Column(db.Text) # JSON blob of bids, endTime, winner etc.
+    key = db.Column(db.String(50), unique=True)
+    state_json = db.Column(db.Text)

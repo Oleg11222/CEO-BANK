@@ -13,6 +13,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/css/shepherd.css"/>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator/qrcode.js"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
 </head>
 <body>
 
@@ -22,7 +24,7 @@
     <h1 id="greeting">Вітаємо!</h1>
   </div>
   <div class="header-right">
-    <button class="icon-button" onclick="showNotificationsModal()" aria-label="Сповіщення">
+    <button class="icon-button" onclick="openModal('notificationsModal')" aria-label="Сповіщення">
       🔔<span id="notification-badge" class="notification-badge" style="display: none;"></span>
     </button>
     <button class="logout-btn" onclick="logout()">Вийти</button>
@@ -89,19 +91,19 @@
     </div>
 
     <div class="quick-actions-grid">
-      <button id="send-money-btn" class="action-card" onclick="showSendMoney()">
+      <button id="send-money-btn" class="action-card" onclick="openModal('sendMoneyModal')">
         <span class="action-icon">💸</span>
         <span class="action-label">Переказ</span>
       </button>
-      <button id="deposit-btn" class="action-card" onclick="showDeposit()">
+      <button id="deposit-btn" class="action-card" onclick="openModal('depositModal')">
         <span class="action-icon">📈</span>
         <span class="action-label">Депозит</span>
       </button>
-      <button id="auction-btn" class="action-card" onclick="showAuction()">
+      <button id="auction-btn" class="action-card" onclick="openModal('auctionModal')">
         <span class="action-icon">⚖️</span>
         <span class="action-label">Аукціон</span>
       </button>
-      <button id="shop-btn" class="action-card" onclick="showShop()">
+      <button id="shop-btn" class="action-card" onclick="openModal('shopModal')">
         <span class="action-icon">🛍️</span>
         <span class="action-label">Магазин</span>
       </button>
@@ -125,23 +127,23 @@
     <span class="nav-icon">🏠</span>
     <span class="nav-label">Головна</span>
   </button>
-  <button id="schedule-nav-btn" class="nav-btn" onclick="showSchedule()">
+  <button id="schedule-nav-btn" class="nav-btn" onclick="openModal('scheduleModal')">
     <span class="nav-icon">🗓️</span>
     <span class="nav-label">Розклад</span>
   </button>
-  <button id="exchange-nav-btn" class="nav-btn" onclick="showExchange()">
+  <button id="exchange-nav-btn" class="nav-btn" onclick="openModal('exchangeModal')">
     <span class="nav-icon">💹</span>
     <span class="nav-label">Біржа</span>
   </button>
-  <button id="profile-nav-btn" class="nav-btn" onclick="showPersonalInfo()">
+  <button id="profile-nav-btn" class="nav-btn" onclick="openModal('personalModal')">
     <span class="nav-icon">👤</span>
     <span class="nav-label">Профіль</span>
   </button>
-  <button id="rewards-nav-btn" class="nav-btn" onclick="showRewards()">
+  <button id="rewards-nav-btn" class="nav-btn" onclick="openModal('rewardsModal')">
     <span class="nav-icon">🎁</span>
     <span class="nav-label">Завдання</span>
   </button>
-  <button id="support-nav-btn" class="nav-btn" onclick="showSupport()">
+  <button id="support-nav-btn" class="nav-btn" onclick="openModal('supportModal')">
     <span class="nav-icon">💬</span>
     <span class="nav-label">Підтримка</span>
   </button>
@@ -150,10 +152,10 @@
 
 <div id="welcomeModal" class="modal">
   <div class="modal-content">
-    <span class="modal-close-btn" onclick="closeWelcomeModal()" aria-label="Закрити">×</span>
+    <span class="modal-close-btn" onclick="closeModal('welcomeModal')" aria-label="Закрити">×</span>
     <h3>Вітаємо, CEO! 🎉</h3>
     <p>Керуй своїми фінансами легко та сучасно!</p>
-    <button class="action-button primary-button" onclick="closeWelcomeModal()">Розпочати</button>
+    <button class="action-button primary-button" onclick="closeModal('welcomeModal')">Розпочати</button>
   </div>
 </div>
 
@@ -216,10 +218,10 @@
       </div>
       <div class="profile-actions">
         <button class="action-button secondary-button" onclick="showQrCodeModal()">Мій QR-код</button>
-        <button id="loan-profile-btn" class="action-button secondary-button" onclick="showLoanModal()">Кредит</button>
-        <button id="insurance-profile-btn" class="action-button secondary-button" onclick="showInsuranceModal()">Страхування</button>
-        <button class="action-button secondary-button" onclick="showEventHistoryModal()">Історія покупок</button>
-        <button class="action-button reward-button" onclick="showMyWinningsModal()">Мої виграші</button>
+        <button id="loan-profile-btn" class="action-button secondary-button" onclick="openModal('loanModal')">Кредит</button>
+        <button id="insurance-profile-btn" class="action-button secondary-button" onclick="openModal('insuranceModal')">Страхування</button>
+        <button class="action-button secondary-button" onclick="openModal('eventHistoryModal')">Історія покупок</button>
+        <button class="action-button reward-button" onclick="openModal('myWinningsModal')">Мої виграші</button>
       </div>
     </div>
     <h3>Статистика</h3>
@@ -261,7 +263,7 @@
     <div class="shop-header-controls">
       <h3>🛍️ Магазин</h3>
       <div class="header-buttons-group">
-        <button class="action-button cart-button" onclick="showCart()">🛒 (<span id="cartCountModal">0</span>)</button>
+        <button class="action-button cart-button" onclick="openModal('cartModal')">🛒 (<span id="cartCountModal">0</span>)</button>
       </div>
       <span class="modal-close-btn shop-close-btn" onclick="closeModal('shopModal')" aria-label="Закрити">×</span>
     </div>

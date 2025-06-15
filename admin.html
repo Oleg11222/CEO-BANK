@@ -125,7 +125,7 @@
       <button class="nav-item" onclick="showSection('chat')"><span class="nav-icon">💬</span> Чат</button>
       <button class="nav-item" onclick="showSection('settings')"><span class="nav-icon">⚙️</span> Налаштування</button>
     </nav>
-    <button class="nav-item styled-button logout-btn-sidebar" onclick="adminLogout()"><span class="nav-icon">🚪</span> Вийти</button>
+    <button class="nav-item styled-button logout-btn-sidebar" onclick="logout()"><span class="nav-icon">🚪</span> Вийти</button>
   </div>
 
   <main class="main-content">
@@ -216,7 +216,7 @@
           </div>
         </div>
         <img id="imagePreview" class="shop-image-preview" style="display: none;" alt="Попередній перегляд">
-        <button id="addShopItemBtn" onclick="addShopItem()" class="styled-button action-btn">Зберегти товар</button>
+        <button id="addShopItemBtn" onclick="addOrUpdateShopItem()" class="styled-button action-btn">Зберегти товар</button>
         <button id="clearShopFormBtn" onclick="clearShopForm()" class="styled-button action-btn close-btn" style="display: none;">Скасувати редагування</button>
       </div>
       <hr>
@@ -528,6 +528,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="script.js" defer></script>
 
 </body>
