@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, abort
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room
 from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, jwt_required, JWTManager, verify_jwt_in_request
@@ -33,6 +33,8 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
+# --- Допоміжні функції та Декоратори ---
+
 def admin_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -47,35 +49,46 @@ def admin_required(fn):
 def get_setting(key, default=None):
     setting = GlobalSetting.query.get(key)
     if setting:
-        try: return json.loads(setting.value)
-        except (json.JSONDecodeError, TypeError): return setting.value
+        try:
+            return json.loads(setting.value)
+        except (json.JSONDecodeError, TypeError):
+            return setting.value
     return default
 
 def set_setting(key, value):
     with app.app_context():
         setting = GlobalSetting.query.get(key)
         if not setting:
-            setting = GlobalSetting(key=key); db.session.add(setting)
-        setting.value = json.dumps(value); db.session.commit()
+            setting = GlobalSetting(key=key)
+            db.session.add(setting)
+        setting.value = json.dumps(value)
+        db.session.commit()
         socketio.emit('settings_update', {'key': key, 'value': value})
 
 def add_transaction(user_id, action, amount, is_positive, comment='', details=None, commit=True):
+    user = User.query.get(user_id)
+    if not user: return
     transaction = Transaction(user_id=user_id, action=action, amount=round(amount, 2), is_positive=is_positive, comment=comment, details=json.dumps(details) if details else None)
     db.session.add(transaction)
-    if commit: db.session.commit()
+    if commit:
+        db.session.commit()
+    socketio.emit('new_transaction', {'userId': user_id, 'transaction': transaction.to_dict()}, room=f'user_{user_id}')
 
 def notify_user(user_id, message_text, commit_now=True):
     notification = Notification(user_id=user_id, text=message_text, date=datetime.now(timezone.utc))
     db.session.add(notification)
-    if commit_now: db.session.commit()
+    if commit_now:
+        db.session.commit()
     socketio.emit('new_notification', {'text': message_text}, room=f'user_{user_id}')
 
 def get_current_user():
-    return User.query.get(get_jwt_identity()['id'])
+    user_identity = get_jwt_identity()
+    return User.query.get(user_identity['id'])
 
 @app.cli.command("init-db")
 def init_db_command():
-    db.drop_all(); db.create_all()
+    db.drop_all()
+    db.create_all()
     logging.info("Базу даних очищено та створено заново.")
     admin_user = User(username='admin', is_admin=True); admin_user.set_password('admin123'); db.session.add(admin_user)
     for i in range(1, 71):
@@ -145,7 +158,7 @@ def get_initial_data():
         'user': user.to_dict(include_sensitive=True),
         'shopItems': [item.to_dict() for item in ShopItem.query.order_by(ShopItem.name).all()],
         'tasks': [task.to_dict() for task in Task.query.all()],
-        'auction': { 'isActive': general_auction_state.get('isActive', False), 'endTime': general_auction_state.get('endTime'), 'bids': general_auction_state.get('bids', []), 'winner': general_auction_state.get('winner'), 'specialLot': special_lot_state },
+        'auction': { 'isActive': general_auction_state.get('isActive', False), 'endTime': general_auction_state.get('endTime'), 'bids': [], 'specialLot': special_lot_state },
         'exchange': { 'companies': [c.to_dict() for c in Asset.query.filter_by(type='stock').all()], 'crypto': [c.to_dict() for c in Asset.query.filter_by(type='crypto').all()] },
         'settings': settings, 'ceoNews': get_setting('ceoNews', []),
         'schedule': [{'id': item.id, 'time': item.time_str, 'activity': item.activity} for item in ScheduleItem.query.order_by(ScheduleItem.time_str).all()],
@@ -173,7 +186,6 @@ def transfer_money():
     recipient = User.query.filter_by(username=recipient_username).first()
     if not recipient or recipient.is_admin: return jsonify({"msg": f"Отримувача '{recipient_username}' не знайдено"}), 404
     if sender.balance < amount: return jsonify({"msg": "Недостатньо коштів"}), 400
-    
     sender.balance -= amount; sender.total_sent += amount
     add_transaction(sender.id, f'Переказ до {recipient.username}', amount, False, commit=False)
     recipient.balance += amount
@@ -209,7 +221,7 @@ def shop_checkout():
     return jsonify({"msg": "Покупку успішно оформлено"}), 200
 
 @app.route('/api/admin/dashboard-stats', methods=['GET'])
-@admin_required()
+@admin_required
 def get_dashboard_stats():
     users = User.query.filter_by(is_admin=False).all()
     total_balance = sum(u.balance for u in users) if users else 0
@@ -222,7 +234,7 @@ def get_dashboard_stats():
     })
 
 @app.route('/api/admin/users', methods=['GET', 'POST'])
-@admin_required()
+@admin_required
 def manage_users():
     if request.method == 'GET':
         return jsonify([u.to_dict() for u in User.query.filter_by(is_admin=False).order_by(User.username).all()])
@@ -231,10 +243,10 @@ def manage_users():
     if User.query.filter_by(username=username).first(): return jsonify({"msg": "Користувач вже існує"}), 409
     new_user = User(username=username, balance=data.get('balance', 100), loyalty_points=data.get('loyaltyPoints', 10)); new_user.set_password(password)
     db.session.add(new_user); db.session.commit()
-    return jsonify(new_user.to_dict()), 201
+    socketio.emit('admin_data_refresh', 'users'); return jsonify(new_user.to_dict()), 201
 
 @app.route('/api/admin/users/<int:user_id>', methods=['PUT', 'DELETE'])
-@admin_required()
+@admin_required
 def manage_user(user_id):
     user = User.query.get_or_404(user_id)
     if request.method == 'DELETE':
@@ -249,7 +261,7 @@ def manage_user(user_id):
     return jsonify(user.to_dict())
 
 @app.route('/api/admin/transactions', methods=['GET'])
-@admin_required()
+@admin_required
 def admin_get_transactions():
     query = db.session.query(Transaction, User.username).join(User, Transaction.user_id == User.id)
     if filter_text := request.args.get('filter'):
@@ -259,7 +271,7 @@ def admin_get_transactions():
     return jsonify(result)
 
 @app.route('/api/admin/shop', methods=['GET','POST'])
-@admin_required()
+@admin_required
 def manage_shop_items():
     if request.method == 'GET':
         return jsonify([item.to_dict() for item in ShopItem.query.order_by(ShopItem.name).all()])
@@ -267,10 +279,11 @@ def manage_shop_items():
     for key, value in data.items():
         if hasattr(new_item, key): setattr(new_item, key, value)
     db.session.add(new_item); db.session.commit()
-    socketio.emit('shop_update'); return jsonify(new_item.to_dict()), 201
+    socketio.emit('shop_update', {'items': [i.to_dict() for i in ShopItem.query.all()]})
+    return jsonify(new_item.to_dict()), 201
 
 @app.route('/api/admin/shop/<int:item_id>', methods=['PUT', 'DELETE'])
-@admin_required()
+@admin_required
 def manage_shop_item(item_id):
     item = ShopItem.query.get_or_404(item_id)
     if request.method == 'DELETE':
@@ -283,7 +296,7 @@ def manage_shop_item(item_id):
     db.session.commit(); socketio.emit('shop_update'); return jsonify(item.to_dict())
 
 @app.route('/api/admin/settings', methods=['POST'])
-@admin_required()
+@admin_required
 def update_settings():
     settings_data = request.get_json();
     for key, value in settings_data.items():
@@ -291,7 +304,7 @@ def update_settings():
     return jsonify({"msg": "Налаштування оновлено"}), 200
 
 @app.route('/api/admin/ceo-news', methods=['POST'])
-@admin_required()
+@admin_required
 def send_ceo_news():
     text = request.get_json().get('text')
     if not text: return jsonify({'msg': 'Текст новини не може бути порожнім'}), 400
@@ -302,7 +315,7 @@ def send_ceo_news():
 @socketio.on('join')
 @jwt_required(optional=True)
 def on_join():
-    user_identity = get_jwt_identity();
+    user_identity = get_jwt_identity()
     if user_identity:
         join_room(f'user_{user_identity.get("id")}')
         logging.info(f"Клієнт {user_identity.get('id')} приєднався до кімнати.")
@@ -339,5 +352,6 @@ scheduler.add_job(func=update_asset_prices_job, trigger="interval", seconds=15)
 scheduler.add_job(func=check_deposits_job, trigger="interval", minutes=1)
 
 if __name__ == '__main__':
-    if not scheduler.running: scheduler.start()
+    if not scheduler.running:
+        scheduler.start()
     socketio.run(app, host='0.0.0.0', port=5001, debug=False, use_reloader=False)
